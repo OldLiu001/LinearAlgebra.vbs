@@ -1,10 +1,11 @@
+ ```
  _     _                               _            _
 | |   (_)_ __   ___  __ _ _ __    __ _| | __ _  ___| |__  _ __ __ _
 | |   | | '_ \ / _ \/ _` | '__|  / _` | |/ _` |/ _ \ '_ \| '__/ _` |
 | |___| | | | |  __/ (_| | |    | (_| | | (_| |  __/ |_) | | | (_| |
 |_____|_|_| |_|\___|\__,_|_|     \__,_|_|\__, |\___|_.__/|_|  \__,_|
                                          |___/
-
+```
 A powerful Linear Algebra Library written in Visual Basic Script.
 Including Vector, Matrix, and Linear Algebra Operations.
 
