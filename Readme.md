@@ -6,29 +6,50 @@
 |_____|_|_| |_|\___|\__,_|_|     \__,_|_|\__, |\___|_.__/|_|  \__,_|
                                          |___/
 ```
-A powerful Linear Algebra Library written in Visual Basic Script.
-Including Vector, Matrix, and Linear Algebra Operations.
+
+A powerful, safe, readable, easy to use Visual Basic Script Library for Linear Algebra Operations. Including Vector, Matrix, and so on.
+
+Use immutable classes for safety.
 
 # View introduction in
 
+- [Chinese](Readme_zh.md)
 - [English](Readme.md)
-- [Chinese](Readme-zh.md)
 
 # Getting Started
 
 ## Requirements
+
 - A Windows OS (Windows XP SP2 or later)
-- That's all.
 
 ## Installation
+
 Run following commands as **administrator**:
+
 ```
 git clone https://github.com/OldLiu001/LinearAlgebra.vbs.git
 cd LinearAlgebra.vbs
 regsvr32 LinearAlgebra.wsc
 ```
-**WARN: DO NOT REGISTER LinearAlgebra.wsc BY RIGHT CLICKING ON IT.**
+
+**WARN: DO NOT REGISTER *LinearAlgebra.wsc* BY RIGHT CLICKING ON IT.**
 
 ## Usage
 
+```
+Set objVectorGenerator = CreateObject("LinearAlgebra.VectorGenerator")
+Set objMatrixGenerator = CreateObject("LinearAlgebra.MatrixGenerator")
+```
+
+|Class/Object|Property/Method|Name|Argument(s)|Return Value|Description|
+|:---:|:---:|:---:|:---:|:---:|:---:|
+|VectorGenerator|Method|Init|Array1D|Vector Object|Generate a Vector|
+|VectorGenerator|Method|Zero|Dimension|Vector Object|Generate a Zero Vector|
+|MatrixGenerator|Method|Init|Array2D/Vector|Matrix Object|Generate a Matrix|
+|MatrixGenerator|Method|Zero|Row, Column|Matrix Object|Generate a Zero Matrix|
+|MatrixGenerator|Method|Identity|Dimension|Matrix Object|Generate an Identity Matrix|
+
+
 See more Examples in [/Examples](Examples/).
+
+## Error Handling
