@@ -79,4 +79,20 @@
 			]]>
 		</script>
 	</component>
+	<component id="LinearSystem">
+		<?component error="true" debug="true"?>
+		<registration
+			description="Linear System Class"
+			progid="LinearAlgebra.LinearSystem"
+			version="1.00"
+			classid="{20011228-5218-767e-8d85-632171029003}"
+		/>
+		<public>
+		</public>
+		<script language="VBScript" src="Classes/Class_Vector.vbs" />
+		<script language="VBScript" src="Classes/Class_VectorGenerator.vbs" />
+		<script language="VBScript" src="Classes/Class_Matrix.vbs" />
+		<script language="VBScript" src="Classes/Class_MatrixGenerator.vbs" />
+		<script language="VBScript" src="Classes/Class_LinearSystem.vbs" />
+	</component>
 </package>

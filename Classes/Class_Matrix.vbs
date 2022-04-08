@@ -157,7 +157,8 @@ Class Matrix
 	End Property
 
 	Public Property Get RowVector(ByVal lngRowIndex)
-		Set RowVector = CreateComponent("VectorGenerator").Init(Row(lngRowIndex))
+		Set RowVector = New VectorGenerator
+		Set RowVector = RowVector.Init(Row(lngRowIndex))
 	End Property
 
 
@@ -174,6 +175,11 @@ Class Matrix
 			Next
 		End If
 		Column = adblColumn
+	End Property
+
+	Public Property Get ColumnVector(ByVal lngColumnIndex)
+		Set ColumnVector = New VectorGenerator
+		Set ColumnVector = ColumnVector.Init(Column(lngColumnIndex))
 	End Property
 
 	Public Property Get Value(ByVal lngRowIndex, ByVal lngColumnIndex)
