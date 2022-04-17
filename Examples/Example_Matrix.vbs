@@ -58,3 +58,25 @@ WSH.Echo "X * Y: " & X.Multiply(Y).Stringify()
 WSH.Echo "Y * X: " & Y.Multiply(X).Stringify()
 WSH.Echo "X * I: " & X.Multiply(I).Stringify()
 WSH.Echo "I * Y: " & I.Multiply(Y).Stringify()
+WSH.Echo ""
+
+Set A = objMatrixGenerator.Init(Array(Array(1,2),Array(3,4)))
+Set B = objMatrixGenerator.Init(Array(Array(5,6),Array(7,8)))
+WSH.Echo "A: " & A.Stringify()
+WSH.Echo "B: " & B.Stringify()
+WSH.Echo "A.Append(B): " & A.Append(B).Stringify()
+WSH.Echo "B.Append(A): " & B.Append(A).Stringify()
+WSH.Echo "A.Combine(B): " & A.Combine(B).Stringify()
+WSH.Echo "B.Combine(A): " & B.Combine(A).Stringify()
+WSH.Echo ""
+
+
+Set A = objMatrixGenerator.Init(Array(Array(-1)))
+WSH.Echo "A: " & A.Stringify()
+WSH.Echo "A.Determinant(): " & A.Determinant()
+Set B = objMatrixGenerator.Init(Array(Array(1,2),Array(3,4)))
+WSH.Echo "B: " & B.Stringify()
+WSH.Echo "B.Determinant(): " & B.Determinant()
+Set C = objMatrixGenerator.Init(Array(Array(1,2,3),Array(4,5,6),Array(7,8,9)))
+WSH.Echo "C: " & C.Stringify()
+WSH.Echo "C.Determinant(): " & C.Determinant()

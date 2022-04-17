@@ -36,6 +36,11 @@ Class Matrix
 		If boolReadOnly Then
 			Err.Raise conRewriteError, "Matrix", "Matrix is read-only."
 		End If
+
+		If TypeName(avarRaw) = "Matrix" Then
+			boolReadOnly = True
+			Exit Property
+		End If
 		
 		Rem Turn any Input into Array2D(Number).
 		If TypeName(avarRaw) = "Vector" Then
@@ -317,4 +322,98 @@ Class Matrix
 		End If
 	End Function
 
+	Public Function Append(ByVal objAnotherMatrix)
+		Rem Append the matrix to the bottom of the current matrix.
+		Dim adblAppended()
+		If TypeName(objAnotherMatrix) = "Matrix" Then
+			If lngColumn = objAnotherMatrix.ColumnCount Then
+				ReDim adblAppended(lngRow + objAnotherMatrix.RowCount - 1, lngColumn - 1)
+				Dim lngRowIndex
+				Dim lngColumnIndex
+				For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
+					For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
+						adblAppended(lngRowIndex, lngColumnIndex) = avarValues(lngRowIndex, lngColumnIndex)
+					Next
+				Next
+				For lngRowIndex = LBound(objAnotherMatrix.Values, 1) To UBound(objAnotherMatrix.Values, 1)
+					For lngColumnIndex = LBound(objAnotherMatrix.Values, 2) To UBound(objAnotherMatrix.Values, 2)
+						adblAppended(lngRowIndex + lngRow, lngColumnIndex) = _
+							objAnotherMatrix.Value(lngRowIndex, lngColumnIndex)
+					Next
+				Next
+				Set Append = New Matrix
+				Append.Values = adblAppended
+			Else
+				Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch."
+			End If
+		Else
+			Err.Raise conTypeMismatchError, "Matrix", "Type mismatch, expected Matrix."
+		End If
+	End Function
+
+	Public Function Combine(ByVal objAnotherMatrix)
+		Rem Combine the matrix to the right of the current matrix.
+		Set Combine = Transpose().Append(objAnotherMatrix.Transpose()).Transpose()
+	End Function
+
+	Public Property Get Determinant()
+		If lngRow = lngColumn Then
+			If lngRow = 1 Then
+				Determinant = avarValues(0, 0)
+			ElseIf lngRow <= 5 Then
+				Dim lngColumnIndex
+				Determinant = 0
+				For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
+					Determinant = Determinant + _
+						avarValues(0, lngColumnIndex) * _
+						AlgebraicCofactor(0, lngColumnIndex)
+				Next
+			Else
+			End If
+		Else
+			Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch, expected square matrix."
+		End If
+	End Property
+
+	Public Function RemoveRow(lngRowIndex)
+		Rem Remove the specified row from the matrix.
+		Dim adblRemoved()
+		If lngRowIndex >= LBound(avarValues, 1) And lngRowIndex <= UBound(avarValues, 1) Then
+			ReDim adblRemoved(lngRow - 2, lngColumn - 1)
+			Dim lngTemporaryRowIndex
+			Dim lngColumnIndex
+			For lngTemporaryRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
+				For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
+					adblRemoved(
+						lngTemporaryRowIndex + (Sgn(lngTemporaryRowIndex - lngRowIndex) + 1)/2, _
+						lngColumnIndex) = _
+						avarValues(lngTemporaryRowIndex, lngColumnIndex)
+				Next
+			Next
+			Set RemoveRow = New Matrix
+			RemoveRow.Values = adblRemoved
+		Else
+			Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch."
+		End If
+	End Function
+
+	Public Function RemoveColumn(lngColumnIndex)
+		Rem Remove the specified column from the matrix.
+		Set RemoveColumn = Transpose().RemoveRow(lngColumnIndex).Transpose()
+	End Function
+
+	Public Property Get Cofactor(ByVal lngRowIndex, ByVal lngColumnIndex)
+		If lngRow = lngColumn Then
+			Dim objCofactor
+			Set objCofactor = New Matrix
+			objCofactor.Values = RemoveRow(lngRowIndex).RemoveColumn(lngColumnIndex).Values
+			Cofactor = objCofactor.Determinant
+		Else
+			Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch, expected square matrix."
+		End If
+	End Property
+
+	Public Property Get AlgebraicCofactor(ByVal lngRowIndex, ByVal lngColumnIndex)
+		AlgebraicCofactor = (-1) ^ (lngRowIndex + lngColumnIndex) * Cofactor(lngRowIndex, lngColumnIndex)
+	End Property
 End Class
