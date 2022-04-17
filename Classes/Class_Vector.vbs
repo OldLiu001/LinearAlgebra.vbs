@@ -1,87 +1,68 @@
 Option Explicit
 
 Class Vector
-	Private dblEpsilon
-
-	Public _
-		conRewriteError, _
-		conDimensionMismatchError, _
-		conNonNumericError, _
-		conDivideByZeroError, _
-		conLengthIsZeroError
-
 	Private avarValues()
 	Private lngLength, varNorm
 
 	Private boolReadOnly
 
+	Private objVectorGenerator
+
+	Private lngErrorNumber
+
 	Private Sub Class_Initialize()
-		dblEpsilon = 1e-7
 		boolReadOnly = False
 
-		conRewriteError = vbObjectError
-		conDimensionMismatchError = vbObjectError + 1
-		conNonNumericError = vbObjectError + 2
-		conDivideByZeroError = vbObjectError + 3
-		conLengthIsZeroError = vbObjectError + 4
+		Set objVectorGenerator = New VectorGenerator
+	End Sub
+
+	Private Sub Assert(ByVal boolCondition, ByRef strMessage)
+		If Not boolCondition Then
+			Err.Raise vbObjectError, "Vector", strMessage
+		End If
 	End Sub
 
 	Public Property Let Values(ByRef avarRawVector)
-		If Not boolReadOnly Then
-			If Not IsArray(avarRawVector) Then
-				Err.Raise conNonNumericError, "Vector", "The Input must be an array of numbers."
-			End If
-			On Error Resume Next
+		Assert Not boolReadOnly, "Values property is read only."
+		Assert IsArray(avarRawVector), "The Input must be an array of numbers."
+		
+		On Error Resume Next
 			Call UBound(avarRawVector, 1)
-			If Err.Number <> 0 Then
-				On Error GoTo 0
-				Err.Raise _
-					conLengthIsZeroError, _
-					"Vector", _
-					"Input Array is empty."
-			End If
-			On Error GoTo 0
-			
-			lngLength = _
-				UBound(avarRawVector) - _
-				LBound(avarRawVector) + 1
-			
-			If lngLength = 0 Then
-				Err.Raise _
-					conLengthIsZeroError, _
-					"Vector", _
-					"Input Array is empty."
-			End If
+			lngErrorNumber = Err.Number
+		On Error GoTo 0
+		Assert lngErrorNumber = 0, "Input Array is empty."
+		
+		lngLength = _
+			UBound(avarRawVector) - _
+			LBound(avarRawVector) + 1
+		Assert lngLength > 0, "Input Array is empty."
 
-			Dim lngIndex
-			ReDim avarValues(UBound(avarRawVector))
-			
-			varNorm = 0
-			For lngIndex = LBound(avarRawVector) To UBound(avarRawVector)
-				If Not IsNumeric(avarRawVector(lngIndex)) Then
-					Err.Raise _
-						conNonNumericError, _
-						"Vector", _
-						"Array contains non-numeric value(s)."
-				End If
-				avarValues(lngIndex) = CDbl(avarRawVector(lngIndex))
-				varNorm = varNorm + avarValues(lngIndex) ^ 2
-			Next
-			varNorm = Sqr(varNorm)
+		Dim lngIndex
+		ReDim avarValues(UBound(avarRawVector))
 
-			boolReadOnly = True
-		Else
-			Err.Raise conRewriteError, _
-				"Vector", _
-				"Values property is read only."
-		End If
+		varNorm = 0
+		For lngIndex = LBound(avarRawVector) To UBound(avarRawVector)
+			Assert IsNumeric(avarRawVector(lngIndex)), _
+				"Input Array contains non-numeric values."
+			avarValues(lngIndex) = CDbl(avarRawVector(lngIndex))
+			varNorm = varNorm + avarValues(lngIndex) ^ 2
+		Next
+		varNorm = Sqr(varNorm)
+
+		boolReadOnly = True
 	End Property
 	
 	Public Property Get Values()
 		Values = avarValues
 	End Property
 	
+	Private Function IsInteger(ByRef varValue)
+		IsInteger = IsNumeric(varValue) And Fix(varValue) = varValue
+	End Function
+
 	Public Property Get Value(ByRef lngIndex)
+		Assert IsInteger(lngIndex), "Index must be an integer."
+
 		Value = avarValues(lngIndex)
 	End Property
 	
@@ -94,22 +75,19 @@ Class Vector
 	End Property
 
 	Public Function Add(ByRef objAnotherVector)
+		Assert TypeName(objAnotherVector) = "Vector", _
+			"Input must be a Vector."
+		Assert lngLength = objAnotherVector.Length, _
+			"Two Vector's length must be the same."
+		
 		Dim avarResult()
-		If lngLength = objAnotherVector.Length Then
-			ReDim avarResult(lngLength - 1)
-			Dim lngIndex
-			For lngIndex = LBound(avarResult) To UBound(avarResult)
-				avarResult(lngIndex) = _
-					avarValues(lngIndex) + objAnotherVector.Value(lngIndex)
-			Next
-			Set Add = New Vector
-			Add.Values = avarResult
-		Else
-			Err.Raise _
-				conDimensionMismatchError, _
-				"Vector", _
-				"Two Vector's length is not equal."
-		End If
+		ReDim avarResult(lngLength - 1)
+		Dim lngIndex
+		For lngIndex = LBound(avarResult) To UBound(avarResult)
+			avarResult(lngIndex) = _
+				avarValues(lngIndex) + objAnotherVector.Value(lngIndex)
+		Next
+		Set Add = objVectorGenerator.Init(avarResult)
 	End Function
 
 	Public Function Negate()
@@ -119,19 +97,11 @@ Class Vector
 		For lngIndex = LBound(avarResult) To UBound(avarResult)
 			avarResult(lngIndex) = -avarValues(lngIndex)
 		Next
-		Set Negate = New Vector
-		Negate.Values = avarResult
+		Set Negate = objVectorGenerator.Init(avarResult)
 	End Function
 
 	Public Function Subtract(ByRef objAnotherVector)
-		If lngLength = objAnotherVector.Length Then
-			Set Subtract = Add(objAnotherVector.Negate())
-		Else
-			Err.Raise _
-				conDimensionMismatchError, _
-				"Vector", _
-				"Two Vector's length is not equal."
-		End If
+		Set Subtract = Add(objAnotherVector.Negate())
 	End Function
 
 	Public Property Get Norm()
@@ -139,78 +109,54 @@ Class Vector
 	End Property
 
 	Private Function IsZero(ByRef varValue)
-		IsZero = Abs(varValue) < dblEpsilon
+		IsZero = Abs(varValue) < 1E-7
 	End Function
 
 	Public Function Normalize()
-		If IsZero(varNorm) Then
-			Err.Raise _
-				conDivideByZeroError, _
-				"Vector", _
-				"Cannot normalize zero vector."
-		End If
+		Assert Not IsZero(varNorm), "Cannot normalize a zero vector."
+
 		Dim avarResult()
 		ReDim avarResult(lngLength - 1)
 		Dim lngIndex
 		For lngIndex = LBound(avarResult) To UBound(avarResult)
 			avarResult(lngIndex) = avarValues(lngIndex) / varNorm
 		Next
-		Set Normalize = New Vector
-		Normalize.Values = avarResult
+		Set Normalize = objVectorGenerator.Init(avarResult)
 	End Function
 
 	Public Function DotProduct(ByRef objAnotherVector)
-		If lngLength = objAnotherVector.Length Then
-			Dim lngIndex
-			Dim varResult
-			For lngIndex = LBound(avarValues) To UBound(avarValues)
-				varResult = _
-					varResult + _
-					avarValues(lngIndex) * objAnotherVector.Value(lngIndex)
-			Next
-			DotProduct = varResult
-		Else
-			Err.Raise _
-				conDimensionMismatchError, _
-				"Vector", _
-				"Two Vector's length is not equal."
-		End If
+		Assert TypeName(objAnotherVector) = "Vector", _
+			"Input must be a Vector."
+		Assert lngLength = objAnotherVector.Length, _
+			"Two Vector's length must be the same."
+		
+		Dim lngIndex
+		Dim varResult
+		For lngIndex = LBound(avarValues) To UBound(avarValues)
+			varResult = _
+				varResult + _
+				avarValues(lngIndex) * objAnotherVector.Value(lngIndex)
+		Next
+		DotProduct = varResult
 	End Function
 
 	Public Function Multiply(ByRef varAnotherNumber)
-		If IsNumeric(varAnotherNumber) Then
-			Dim avarResult()
-			ReDim avarResult(lngLength - 1)
-			Dim lngIndex
-			For lngIndex = LBound(avarResult) To UBound(avarResult)
-				avarResult(lngIndex) = _
-					avarValues(lngIndex) * varAnotherNumber
-			Next
-			Set Multiply = New Vector
-			Multiply.Values = avarResult
-		Else
-			Err.Raise _
-				conNonNumericError, _
-				"Vector", _
-				"Multiply operand is not numeric."
-		End If
+		Assert IsNumeric(varAnotherNumber), "Multiply operand is not numeric."
+		
+		Dim avarResult()
+		ReDim avarResult(lngLength - 1)
+		Dim lngIndex
+		For lngIndex = LBound(avarResult) To UBound(avarResult)
+			avarResult(lngIndex) = _
+				avarValues(lngIndex) * varAnotherNumber
+		Next
+		Set Multiply = objVectorGenerator.Init(avarResult)
 	End Function
 
 	Public Function Divide(ByRef varAnotherNumber)
-		If IsNumeric(varAnotherNumber) Then
-			If Not IsZero(varAnotherNumber) Then
-				Set Divide = Multiply(1 / varAnotherNumber)
-			Else
-				Err.Raise _
-					conDivideByZeroError, _
-					"Vector", _
-					"Cannot divide by zero."
-			End If
-		Else
-			Err.Raise _
-				conNonNumericError, _
-				"Vector", _
-				"Divide operand is not numeric."
-		End If
+		Assert IsNumeric(varAnotherNumber), "Divide operand is not numeric."
+		Assert Not IsZero(varAnotherNumber), "Cannot divide by zero."
+		
+		Set Divide = Multiply(1 / varAnotherNumber)
 	End Function
 End Class

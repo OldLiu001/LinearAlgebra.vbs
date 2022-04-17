@@ -47,6 +47,7 @@ WSH.Echo "A * D: " & A.Multiply(D).Stringify()
 WSH.Echo "A * 2: " & A.Multiply(2).Stringify()
 WSH.Echo "A / 2: " & A.Divide(2).Stringify()
 WSH.Echo ""
+WSH.Echo objMatrixGenerator.Init(C).Stringify 'assume Vector as row vector
 
 Set X = objMatrixGenerator.Init(Array(Array(1,2)))
 Set Y = objMatrixGenerator.Init(Array(Array(3),Array(4)))
@@ -77,6 +78,14 @@ WSH.Echo "A.Determinant(): " & A.Determinant()
 Set B = objMatrixGenerator.Init(Array(Array(1,2),Array(3,4)))
 WSH.Echo "B: " & B.Stringify()
 WSH.Echo "B.Determinant(): " & B.Determinant()
-Set C = objMatrixGenerator.Init(Array(Array(1,2,3),Array(4,5,6),Array(7,8,9)))
+Set C = objMatrixGenerator.Init(Array(Array(2,0,3),Array(5,-1,0),Array(4,4,2)))
 WSH.Echo "C: " & C.Stringify()
-WSH.Echo "C.Determinant(): " & C.Determinant()
+WSH.Echo "C.AlgebraicCofactor(1,2): " & C.AlgebraicCofactor(1,2)
+Set D = objMatrixGenerator.Init(Array(Array(1,1,1,1),Array(1,2,-2,3),Array(1,4,4,9),Array(-1,8,-8,27)))
+WSH.Echo "D: " & D.Stringify()
+WSH.Echo "D.Determinant(): " & D.Determinant()
+Set E = objMatrixGenerator.Init(Array(Array(1,1,1,1,9),Array(1,2,-2,3,1),Array(1,4,4,9,0),Array(-1,8,-8,27,999),Array(3,3,4,6,9)))
+WSH.Echo "E: " & E.Stringify()
+WSH.Echo timer
+WSH.Echo "E.Determinant(): " & E.Determinant()
+WSH.Echo timer

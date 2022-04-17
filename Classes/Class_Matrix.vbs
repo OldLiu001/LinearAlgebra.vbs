@@ -6,113 +6,94 @@ Class Matrix
 
 	Private boolReadOnly
 
-	Public _
-		conRewriteError, _
-		conDimensionMismatchError, _
-		conNonNumericError, _
-		conDivideByZeroError, _
-		conLengthIsZeroError, _
-		conIndexOutOfRangeError, _
-		conTypeMismatchError
-	
-	Private dblEpsilon
+	Private lngErrorNumber
 
+	Private objMatrixGenerator, objVectorGenerator
+
+	Private Sub Assert(ByVal boolCondition, ByRef strMessage)
+		If Not boolCondition Then
+			Err.Raise vbObjectError, "Matrix", strMessage
+		End If
+	End Sub
+	
 	Private Sub Class_Initialize()
-		dblEpsilon = 1e-7
 		boolReadOnly = False
 
-		conRewriteError = vbObjectError
-		conDimensionMismatchError = vbObjectError + 1
-		conNonNumericError = vbObjectError + 2
-		conDivideByZeroError = vbObjectError + 3
-		conLengthIsZeroError = vbObjectError + 4
-		conIndexOutOfRangeError = vbObjectError + 5
-		conTypeMismatchError = vbObjectError + 6
+		Set objMatrixGenerator = New MatrixGenerator
+		Set objVectorGenerator = New VectorGenerator
 	End Sub
 
 	Public Property Let Values(ByRef avarRaw)
 		Rem Input Type: Vector or Array(Array()) or Array2D().
 		
-		If boolReadOnly Then
-			Err.Raise conRewriteError, "Matrix", "Matrix is read-only."
-		End If
-
-		If TypeName(avarRaw) = "Matrix" Then
-			boolReadOnly = True
-			Exit Property
-		End If
+		Assert Not boolReadOnly, "Matrix is read-only."
 		
+		Assert TypeName(avarRaw) = "Vector" Or IsArray(avarRaw), _
+			"Input is not a vector or array."
+
 		Rem Turn any Input into Array2D(Number).
 		If TypeName(avarRaw) = "Vector" Then
+			Rem Input is Vector.
+
+			Rem Assume that the Vector is a row vector.
 			ReDim avarValues(0, avarRaw.Length - 1)
 			Dim lngIndex
-			For lngIndex = LBound(avarRaw.Values()) To UBound(avarRaw.Values())
+			For lngIndex = 0 To UBound(avarRaw.Values())
 				avarValues(0, lngIndex) = avarRaw.Value(lngIndex)
 			Next
+
 		ElseIf IsArray(avarRaw) Then
+			Rem Input is Array().
+
 			On Error Resume Next
-			Call UBound(avarRaw, 1)
-			If Err.Number <> 0 Then
-				On Error GoTo 0
-				Err.Raise conLengthIsZeroError, "Matrix", "Input array is empty."
-			End If
+				Call UBound(avarRaw, 1)
+				lngErrorNumber = Err.Number
 			On Error GoTo 0
-			If UBound(avarRaw, 1) = -1 Then
-				Err.Raise conLengthIsZeroError, "Matrix", "Input array is empty."
-			Else
-				Dim lngRowIndex
-				Dim lngColumnIndex
-				Dim avarValue
-				For Each avarValue In avarRaw
-					If TypeName(avarValue) = "Variant()" Then
-						Rem Turn Array(Array(...)) into Array2d(...).
-						ReDim avarValues(UBound(avarRaw), UBound(avarValue))
-						For lngRowIndex = LBound(avarRaw) To UBound(avarRaw)
-							For lngColumnIndex = LBound(avarValue) To UBound(avarValue)
-								If IsArray(avarRaw(lngRowIndex)) Then
-									If UBound(avarValue) = UBound(avarRaw(lngRowIndex)) Then
-										If Not IsNumeric(avarRaw(lngRowIndex)(lngColumnIndex)) Then
-											Err.Raise _
-												conNonNumericError, _
-												"Matrix", _
-												"Array contains non-numeric value(s)."
-										Else
-											avarValues(lngRowIndex, lngColumnIndex) = CDbl(avarRaw(lngRowIndex)(lngColumnIndex))
-										End If
-									Else
-										Err.Raise _
-											conDimensionMismatchError, _
-											"Matrix", _
-											"Input array is not a rectangular matrix."
-									End If
-								Else
-									Err.Raise _
-										conTypeMismatchError, _
-										"Matrix", _
-										"Input array is not a rectangular matrix."
-								End If
-							Next
-						Next
-					ElseIf IsNumeric(avarValue) Then
-						ReDim avarValues(UBound(avarRaw, 1), UBound(avarRaw, 2))
-						For lngRowIndex = LBound(avarRaw) To UBound(avarRaw)
-							For lngColumnIndex = LBound(avarRaw, 2) To UBound(avarRaw, 2)
-								If Not IsNumeric(avarRaw(lngRowIndex, lngColumnIndex)) Then
-									Err.Raise _
-										conNonNumericError, _
-										"Matrix", _
-										"Array contains non-numeric value(s)."
-								Else
-									avarValues(lngRowIndex, lngColumnIndex) = CDbl(avarRaw(lngRowIndex, lngColumnIndex))
-								End If
-							Next
-						Next
-					End If
-					Exit For
+			Assert lngErrorNumber = 0, "Input array is empty."
+			Assert UBound(avarRaw, 1) > -1, "Input array is empty."
+
+			Dim lngRowIndex
+			Dim lngColumnIndex
+			Dim varElement
+			varElement = GetFirstElement(avarRaw)
+			Assert TypeName(varElement) = "Variant()" Or _
+				IsNumeric(varElement), _
+				"Input array has unexpected structure(s)."
+			
+			If TypeName(varElement) = "Variant()" Then
+				Rem Input is Array(Array()).
+
+				Rem Turning Array(Array(...)) into Array2d(...).
+				ReDim avarValues(UBound(avarRaw), UBound(varElement))
+				For lngRowIndex = 0 To UBound(avarRaw)
+					For lngColumnIndex = 0 To UBound(varElement)
+						Assert IsArray(avarRaw(lngRowIndex)), _
+							"Input array has unexpected structure(s)."
+						Assert UBound(varElement) = UBound(avarRaw(lngRowIndex)), _
+							"Input array is not rectangular."
+						Assert IsNumeric(avarRaw(lngRowIndex)(lngColumnIndex)), _
+							"Array contains non-numeric value(s)."
+
+						avarValues(lngRowIndex, lngColumnIndex) = _
+							CDbl(avarRaw(lngRowIndex)(lngColumnIndex))
+					Next
+				Next
+			ElseIf IsNumeric(varElement) Then
+				Rem Input is Array2D().
+
+				Rem Just copy & check.
+				ReDim avarValues(UBound(avarRaw, 1), UBound(avarRaw, 2))
+				For lngRowIndex = 0 To UBound(avarRaw)
+					For lngColumnIndex = 0 To UBound(avarRaw, 2)
+						Assert IsNumeric(avarRaw(lngRowIndex, lngColumnIndex)), _
+							"Array contains non-numeric value(s)."
+						
+						avarValues(lngRowIndex, lngColumnIndex) = _
+							CDbl(avarRaw(lngRowIndex, lngColumnIndex))
+					Next
 				Next
 			End If
-		Else
-			Err.Raise conTypeMismatchError, "Matrix", "Input is not a vector or array."
+			
 		End If
 
 		lngRow = UBound(avarValues, 1) + 1
@@ -120,14 +101,22 @@ Class Matrix
 		boolReadOnly = True
 	End Property
 
+	Private Function GetFirstElement(ByRef avarArray)
+		Dim varElement
+		For Each varElement In avarArray
+			GetFirstElement = varElement
+			Exit For
+		Next
+	End Function
+
 	Public Property Get Stringify()
 		Dim lngRowIndex
 		Dim lngColumnIndex
 		Stringify = "[" & vbNewLine
-		For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
+		For lngRowIndex = 0 To UBound(Values, 1)
 			Stringify = Stringify & "	[ "
-			For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-				Stringify = Stringify & avarValues(lngRowIndex, lngColumnIndex) & " "
+			For lngColumnIndex = 0 To UBound(Values, 2)
+				Stringify = Stringify & Value(lngRowIndex, lngColumnIndex) & " "
 			Next
 			Stringify = Stringify & "]" & vbNewLine
 		Next
@@ -143,58 +132,55 @@ Class Matrix
 	End Property
 	
 	Public Property Get Length()
-		Length = lngRow * lngColumn
+		Length = RowCount * ColumnCount
 	End Property
 
+	Private Function IsInteger(ByRef varValue)
+		IsInteger = IsNumeric(varValue) And Fix(varValue) = varValue
+	End Function
+	
 	Public Property Get Row(ByVal lngRowIndex)
-		Dim adblRow
+		Assert IsInteger(lngRowIndex), "Index must be an integer."
+		Assert lngRowIndex < RowCount And lngRowIndex >= 0, _
+			"Index out of range."
 		
-		If lngRowIndex >= lngRow Then
-			Err.Raise conIndexOutOfRangeError, "Matrix", "Row index out of range."
-		Else
-			ReDim adblRow(lngColumn - 1)
-			Dim lngColumnIndex
-			For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-				adblRow(lngColumnIndex) = avarValues(lngRowIndex, lngColumnIndex)
-			Next
-		End If
+		Dim adblRow
+		ReDim adblRow(ColumnCount - 1)
+		Dim lngColumnIndex
+		For lngColumnIndex = 0 To UBound(Values, 2)
+			adblRow(lngColumnIndex) = Value(lngRowIndex, lngColumnIndex)
+		Next
 		Row = adblRow
 	End Property
 
 	Public Property Get RowVector(ByVal lngRowIndex)
-		Set RowVector = New VectorGenerator
-		Set RowVector = RowVector.Init(Row(lngRowIndex))
+		Set RowVector = objVectorGenerator.Init(Row(lngRowIndex))
 	End Property
 
+	Public Property Get RowMatrix(ByVal lngRowIndex)
+		Set RowMatrix = objMatrixGenerator.Init(Array(Row(lngRowIndex)))
+	End Property
 
 	Public Property Get Column(ByVal lngColumnIndex)
-		Dim adblColumn
-
-		If lngColumnIndex >= lngColumn Then
-			Err.Raise conIndexOutOfRangeError, "Matrix", "Column index out of range."
-		Else
-			ReDim adblColumn(lngRow - 1)
-			Dim lngRowIndex
-			For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
-				adblColumn(lngRowIndex) = avarValues(lngRowIndex, lngColumnIndex)
-			Next
-		End If
-		Column = adblColumn
+		Column = Transpose().Row(lngColumnIndex)
 	End Property
 
 	Public Property Get ColumnVector(ByVal lngColumnIndex)
-		Set ColumnVector = New VectorGenerator
-		Set ColumnVector = ColumnVector.Init(Column(lngColumnIndex))
+		Set ColumnVector = objVectorGenerator.Init(Column(lngColumnIndex))
+	End Property
+
+	Public Property Get ColumnMatrix(ByVal lngColumnIndex)
+		Set ColumnMatrix = objMatrixGenerator.Init(Array(Column(lngColumnIndex))).Transpose()
 	End Property
 
 	Public Property Get Value(ByVal lngRowIndex, ByVal lngColumnIndex)
-		If lngRowIndex >= lngRow Then
-			Err.Raise conIndexOutOfRangeError, "Matrix", "Row index out of range."
-		ElseIf lngColumnIndex >= lngColumn Then
-			Err.Raise conIndexOutOfRangeError, "Matrix", "Column index out of range."
-		Else
-			Value = avarValues(lngRowIndex, lngColumnIndex)
-		End If
+		Assert IsInteger(lngRowIndex) And IsInteger(lngColumnIndex), _
+			"Index must be an integer."
+		Assert lngRowIndex < RowCount And lngRowIndex >= 0 And _
+			lngColumnIndex < ColumnCount And lngColumnIndex >= 0, _
+			"Index out of range."
+		
+		Value = avarValues(lngRowIndex, lngColumnIndex)
 	End Property
 
 	Public Property Get Values()
@@ -205,52 +191,45 @@ Class Matrix
 		Dim adblTransposed()
 		Dim lngRowIndex
 		Dim lngColumnIndex
-		ReDim adblTransposed(lngColumn - 1, lngRow - 1)
-		For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
-			For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-				adblTransposed(lngColumnIndex, lngRowIndex) = avarValues(lngRowIndex, lngColumnIndex)
+		ReDim adblTransposed(ColumnCount - 1, RowCount - 1)
+		For lngRowIndex = 0 To UBound(Values, 1)
+			For lngColumnIndex = 0 To UBound(Values, 2)
+				adblTransposed(lngColumnIndex, lngRowIndex) = Value(lngRowIndex, lngColumnIndex)
 			Next
 		Next
-		Set Transpose = New Matrix
-		Transpose.Values = adblTransposed
+		Set Transpose = objMatrixGenerator.Init(adblTransposed)
 	End Function
 
 	Public Function Add(ByVal objAnotherMatrix)
-		If TypeName(objAnotherMatrix) = "Matrix" Then
-			Dim adblAdded()
-			Dim lngRowIndex
-			Dim lngColumnIndex
-			If lngRow = objAnotherMatrix.RowCount And lngColumn = objAnotherMatrix.ColumnCount Then
-				ReDim adblAdded(lngRow - 1, lngColumn - 1)
-				For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
-					For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-						adblAdded(lngRowIndex, lngColumnIndex) = _
-							avarValues(lngRowIndex, lngColumnIndex) + _
-							objAnotherMatrix.Value(lngRowIndex, lngColumnIndex)
-					Next
-				Next
-				Set Add = New Matrix
-				Add.Values = adblAdded
-			Else
-				Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch."
-			End If
-		Else
-			Err.Raise conTypeMismatchError, "Matrix", "Type mismatch."
-		End If
+		Assert TypeName(objAnotherMatrix) = "Matrix", "Type mismatch."
+		Assert RowCount = objAnotherMatrix.RowCount And ColumnCount = objAnotherMatrix.ColumnCount, _
+			"Dimension mismatch."
+		
+		Dim adblAdded()
+		Dim lngRowIndex
+		Dim lngColumnIndex
+		ReDim adblAdded(RowCount - 1, ColumnCount - 1)
+		For lngRowIndex = 0 To UBound(Values, 1)
+			For lngColumnIndex = 0 To UBound(Values, 2)
+				adblAdded(lngRowIndex, lngColumnIndex) = _
+					Value(lngRowIndex, lngColumnIndex) + _
+					objAnotherMatrix.Value(lngRowIndex, lngColumnIndex)
+			Next
+		Next
+		Set Add = objMatrixGenerator.Init(adblAdded)
 	End Function
 
 	Public Function Negate()
 		Dim adblNegated()
 		Dim lngRowIndex
 		Dim lngColumnIndex
-		ReDim adblNegated(lngRow - 1, lngColumn - 1)
-		For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
-			For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-				adblNegated(lngRowIndex, lngColumnIndex) = -avarValues(lngRowIndex, lngColumnIndex)
+		ReDim adblNegated(RowCount - 1, ColumnCount - 1)
+		For lngRowIndex = 0 To UBound(Values, 1)
+			For lngColumnIndex = 0 To UBound(Values, 2)
+				adblNegated(lngRowIndex, lngColumnIndex) = -Value(lngRowIndex, lngColumnIndex)
 			Next
 		Next
-		Set Negate = New Matrix
-		Negate.Values = adblNegated
+		Set Negate = objMatrixGenerator.Init(adblNegated)
 	End Function
 
 	Public Function Subtract(ByVal objAnotherMatrix)
@@ -258,97 +237,81 @@ Class Matrix
 	End Function
 
 	Public Function Multiply(ByVal objAnother)
+		Assert IsNumeric(objAnother) Or _
+			TypeName(objAnother) = "Vector" Or _
+			TypeName(objAnother) = "Matrix", "Type mismatch."
+		
 		Dim adblMultiplied()
+		Dim lngRowIndex, lngColumnIndex
 		If IsNumeric(objAnother) Then
-			ReDim adblMultiplied(lngRow - 1, lngColumn - 1)
-			For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
-				For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
+			Rem Matrix * Number
+
+			ReDim adblMultiplied(RowCount - 1, ColumnCount - 1)
+			For lngRowIndex = 0 To UBound(Values, 1)
+				For lngColumnIndex = 0 To UBound(Values, 2)
 					adblMultiplied(lngRowIndex, lngColumnIndex) = _
-						avarValues(lngRowIndex, lngColumnIndex) * objAnother
+						Value(lngRowIndex, lngColumnIndex) * objAnother
 				Next
 			Next
-			Set Multiply = New Matrix
-			Multiply.Values = adblMultiplied
-		ElseIf TypeName(objAnother) = "Matrix" Then
-			If lngColumn = objAnother.RowCount Then
-				ReDim adblMultiplied(lngRow - 1, objAnother.ColumnCount - 1)
-				Dim lngRowIndex
-				Dim lngColumnIndex
-				Dim lngAnotherColumnIndex
-				For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
-					For lngAnotherColumnIndex = LBound(objAnother.Values, 2) To UBound(objAnother.Values, 2)
-						adblMultiplied(lngRowIndex, lngAnotherColumnIndex) = 0
-						For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-							adblMultiplied(lngRowIndex, lngAnotherColumnIndex) = _
-								adblMultiplied(lngRowIndex, lngAnotherColumnIndex) + _
-								avarValues(lngRowIndex, lngColumnIndex) * _
-								objAnother.Value(lngColumnIndex, lngAnotherColumnIndex)
-						Next
-					Next
-				Next
-				Set Multiply = New Matrix
-				Multiply.Values = adblMultiplied
-			Else
-				Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch."
-			End If
+			Set Multiply = objMatrixGenerator.Init(adblMultiplied)
 		ElseIf TypeName(objAnother) = "Vector" Then
-			Rem Assume that the vector is a column vector.
-			If lngColumn = objAnother.Length Then
-				ReDim adblMultiplied(lngRow - 1, 0)
-				For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
-					adblMultiplied(lngRowIndex, 0) = 0
-					For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-						adblMultiplied(lngRowIndex, 0) = _
-							adblMultiplied(lngRowIndex, 0) + _
-							avarValues(lngRowIndex, lngColumnIndex) * _
-							objAnother.Value(lngColumnIndex)
-					Next
+			Rem Matrix * Vector
+
+			Rem Assume Vector is a column matrix.
+			Dim adblMultipliedRow()
+			Set Multiply = Multiply(objMatrixGenerator.Init(objAnother).Transpose())
+		ElseIf TypeName(objAnother) = "Matrix" Then
+			Rem Matrix * Matrix
+
+			Assert ColumnCount = objAnother.RowCount, _
+				"Dimension mismatch."
+			ReDim adblMultiplied(RowCount - 1, objAnother.ColumnCount - 1)
+			Dim lngAnotherColumnIndex
+			For lngRowIndex = 0 To UBound(Values, 1)
+				For lngAnotherColumnIndex = 0 To UBound(objAnother.Values, 2)
+					
+					adblMultiplied(lngRowIndex, lngAnotherColumnIndex) = _
+						RowVector(lngRowIndex).DotProduct( _
+						objAnother.ColumnVector(lngAnotherColumnIndex))
 				Next
-				Set Multiply = New Matrix
-				Multiply.Values = adblMultiplied
-			Else
-				Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch."
-			End If
-		Else
-			Err.Raise conTypeMismatchError, "Matrix", "Type mismatch."
+			Next
+			Set Multiply = objMatrixGenerator.Init(adblMultiplied)
 		End If
 	End Function
 
+	Private Function IsZero(ByRef varValue)
+		IsZero = Abs(varValue) < 1E-7
+	End Function
+	
 	Public Function Divide(ByVal varAnotherNumber)
-		If IsNumeric(varAnotherNumber) Then
-			Set Divide = Multiply(1 / varAnotherNumber)
-		Else
-			Err.Raise conTypeMismatchError, "Matrix", "Type mismatch."
-		End If
+		Assert IsNumeric(varAnotherNumber), "Type mismatch."
+		Assert Not IsZero(varAnotherNumber), "Division by zero."
+		Set Divide = Multiply(1 / varAnotherNumber)
 	End Function
 
 	Public Function Append(ByVal objAnotherMatrix)
 		Rem Append the matrix to the bottom of the current matrix.
+
+		Assert TypeName(objAnotherMatrix) = "Matrix", "Type mismatch."
+		Assert ColumnCount = objAnotherMatrix.ColumnCount, _
+			"Dimension mismatch."
+		
 		Dim adblAppended()
-		If TypeName(objAnotherMatrix) = "Matrix" Then
-			If lngColumn = objAnotherMatrix.ColumnCount Then
-				ReDim adblAppended(lngRow + objAnotherMatrix.RowCount - 1, lngColumn - 1)
-				Dim lngRowIndex
-				Dim lngColumnIndex
-				For lngRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
-					For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-						adblAppended(lngRowIndex, lngColumnIndex) = avarValues(lngRowIndex, lngColumnIndex)
-					Next
-				Next
-				For lngRowIndex = LBound(objAnotherMatrix.Values, 1) To UBound(objAnotherMatrix.Values, 1)
-					For lngColumnIndex = LBound(objAnotherMatrix.Values, 2) To UBound(objAnotherMatrix.Values, 2)
-						adblAppended(lngRowIndex + lngRow, lngColumnIndex) = _
-							objAnotherMatrix.Value(lngRowIndex, lngColumnIndex)
-					Next
-				Next
-				Set Append = New Matrix
-				Append.Values = adblAppended
-			Else
-				Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch."
-			End If
-		Else
-			Err.Raise conTypeMismatchError, "Matrix", "Type mismatch, expected Matrix."
-		End If
+		ReDim adblAppended(RowCount + objAnotherMatrix.RowCount - 1, ColumnCount - 1)
+		Dim lngRowIndex
+		Dim lngColumnIndex
+		For lngRowIndex = 0 To UBound(Values, 1)
+			For lngColumnIndex = 0 To UBound(Values, 2)
+				adblAppended(lngRowIndex, lngColumnIndex) = Value(lngRowIndex, lngColumnIndex)
+			Next
+		Next
+		For lngRowIndex = 0 To UBound(objAnotherMatrix.Values, 1)
+			For lngColumnIndex = 0 To UBound(objAnotherMatrix.Values, 2)
+				adblAppended(lngRowIndex + RowCount, lngColumnIndex) = _
+					objAnotherMatrix.Value(lngRowIndex, lngColumnIndex)
+			Next
+		Next
+		Set Append = objMatrixGenerator.Init(adblAppended)
 	End Function
 
 	Public Function Combine(ByVal objAnotherMatrix)
@@ -357,63 +320,63 @@ Class Matrix
 	End Function
 
 	Public Property Get Determinant()
-		If lngRow = lngColumn Then
-			If lngRow = 1 Then
-				Determinant = avarValues(0, 0)
-			ElseIf lngRow <= 5 Then
-				Dim lngColumnIndex
-				Determinant = 0
-				For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-					Determinant = Determinant + _
-						avarValues(0, lngColumnIndex) * _
-						AlgebraicCofactor(0, lngColumnIndex)
-				Next
-			Else
-			End If
+		Assert RowCount = ColumnCount, _
+			"Only square matrix has determinant."
+		
+		If RowCount = 1 Then
+			Determinant = Value(0, 0)
+		ElseIf RowCount <= 3 Then
+			Dim lngColumnIndex
+			Determinant = 0
+			For lngColumnIndex = 0 To UBound(Values, 2)
+				Determinant = Determinant + _
+					Value(0, lngColumnIndex) * _
+					AlgebraicCofactor(0, lngColumnIndex)
+			Next
 		Else
-			Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch, expected square matrix."
+			'TODO: gauss elimination
 		End If
 	End Property
 
 	Public Function RemoveRow(lngRowIndex)
 		Rem Remove the specified row from the matrix.
+		
+		Assert lngRowIndex >= 0 And lngRowIndex < RowCount, _
+			"Index out of range."
+		
 		Dim adblRemoved()
-		If lngRowIndex >= LBound(avarValues, 1) And lngRowIndex <= UBound(avarValues, 1) Then
-			ReDim adblRemoved(lngRow - 2, lngColumn - 1)
-			Dim lngTemporaryRowIndex
-			Dim lngColumnIndex
-			For lngTemporaryRowIndex = LBound(avarValues, 1) To UBound(avarValues, 1)
-				For lngColumnIndex = LBound(avarValues, 2) To UBound(avarValues, 2)
-					adblRemoved(
-						lngTemporaryRowIndex + (Sgn(lngTemporaryRowIndex - lngRowIndex) + 1)/2, _
+		ReDim adblRemoved(RowCount - 2, ColumnCount - 1)
+		Dim lngTemporaryRowIndex
+		Dim lngColumnIndex
+		For lngTemporaryRowIndex = 0 To UBound(Values, 1)
+			For lngColumnIndex = 0 To UBound(Values, 2)
+				If lngTemporaryRowIndex <> lngRowIndex Then
+					adblRemoved(lngTemporaryRowIndex - _
+						(Sgn(lngTemporaryRowIndex - lngRowIndex) + 1) / 2, _
 						lngColumnIndex) = _
-						avarValues(lngTemporaryRowIndex, lngColumnIndex)
-				Next
+						Value(lngTemporaryRowIndex, lngColumnIndex)
+				End If
 			Next
-			Set RemoveRow = New Matrix
-			RemoveRow.Values = adblRemoved
-		Else
-			Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch."
-		End If
+		Next
+		Set RemoveRow = objMatrixGenerator.Init(adblRemoved)
 	End Function
 
 	Public Function RemoveColumn(lngColumnIndex)
 		Rem Remove the specified column from the matrix.
-		Set RemoveColumn = Transpose().RemoveRow(lngColumnIndex).Transpose()
+		Set RemoveColumn = _
+			Transpose().RemoveRow(lngColumnIndex).Transpose()
 	End Function
 
 	Public Property Get Cofactor(ByVal lngRowIndex, ByVal lngColumnIndex)
-		If lngRow = lngColumn Then
-			Dim objCofactor
-			Set objCofactor = New Matrix
-			objCofactor.Values = RemoveRow(lngRowIndex).RemoveColumn(lngColumnIndex).Values
-			Cofactor = objCofactor.Determinant
-		Else
-			Err.Raise conDimensionMismatchError, "Matrix", "Dimension mismatch, expected square matrix."
-		End If
+		Assert RowCount = ColumnCount, _
+			"Only square matrix has cofactor."
+		Cofactor = _
+			RemoveRow(lngRowIndex).RemoveColumn(lngColumnIndex).Determinant
 	End Property
 
 	Public Property Get AlgebraicCofactor(ByVal lngRowIndex, ByVal lngColumnIndex)
-		AlgebraicCofactor = (-1) ^ (lngRowIndex + lngColumnIndex) * Cofactor(lngRowIndex, lngColumnIndex)
+		AlgebraicCofactor = _
+			(-1) ^ (lngRowIndex + lngColumnIndex) * _
+			Cofactor(lngRowIndex, lngColumnIndex)
 	End Property
 End Class
