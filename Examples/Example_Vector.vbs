@@ -2,7 +2,7 @@ If IsEmpty(WSH) Then Set WSH = WScript
 
 Set objVectorGenerator = CreateObject("LinearAlgebra.VectorGenerator")
 
-Set objVector = objVectorGenerator.Init(Array(5,2))
+Set objVector = objVectorGenerator.Init(Array(4,3))
 WSH.Echo objVector.Stringify() + ".Length()", "=", CStr(objVector.Length())
 WSH.Echo objVector.Stringify() + ".Value(0)", "=", CStr(objVector.Value(0))
 WSH.Echo objVector.Stringify() + ".Value(1)", "=", CStr(objVector.Value(1))

@@ -2,13 +2,13 @@ Option Explicit
 
 Class Matrix
 	Private lngRow, lngColumn
-	Private avarValues()
+	Private adblValues()
 
 	Private boolReadOnly
 
 	Private lngErrorNumber
 
-	Private objMatrixGenerator, objVectorGenerator
+	Private objMatrixGenerator, objVectorGenerator, objLinearSystem
 
 	Private Sub Assert(ByVal boolCondition, ByRef strMessage)
 		If Not boolCondition Then
@@ -21,11 +21,10 @@ Class Matrix
 
 		Set objMatrixGenerator = New MatrixGenerator
 		Set objVectorGenerator = New VectorGenerator
+		Set objLinearSystem = New LinearSystem
 	End Sub
 
 	Public Property Let Values(ByRef avarRaw)
-		Rem Input Type: Vector or Array(Array()) or Array2D().
-		
 		Assert Not boolReadOnly, "Matrix is read-only."
 		
 		Assert TypeName(avarRaw) = "Vector" Or IsArray(avarRaw), _
@@ -33,17 +32,17 @@ Class Matrix
 
 		Rem Turn any Input into Array2D(Number).
 		If TypeName(avarRaw) = "Vector" Then
-			Rem Input is Vector.
+			Rem Input is Vector(Number).
 
 			Rem Assume that the Vector is a row vector.
-			ReDim avarValues(0, avarRaw.Length - 1)
+			ReDim adblValues(0, avarRaw.Length - 1)
 			Dim lngIndex
 			For lngIndex = 0 To UBound(avarRaw.Values())
-				avarValues(0, lngIndex) = avarRaw.Value(lngIndex)
+				adblValues(0, lngIndex) = avarRaw.Value(lngIndex)
 			Next
 
 		ElseIf IsArray(avarRaw) Then
-			Rem Input is Array().
+			Rem Input is Array(Number).
 
 			On Error Resume Next
 				Call UBound(avarRaw, 1)
@@ -61,10 +60,10 @@ Class Matrix
 				"Input array has unexpected structure(s)."
 			
 			If TypeName(varElement) = "Variant()" Then
-				Rem Input is Array(Array()).
+				Rem Input is Array(Array(Number)).
 
-				Rem Turning Array(Array(...)) into Array2d(...).
-				ReDim avarValues(UBound(avarRaw), UBound(varElement))
+				Rem Turning Array(Array(Number)) into Array2d(Number).
+				ReDim adblValues(UBound(avarRaw), UBound(varElement))
 				For lngRowIndex = 0 To UBound(avarRaw)
 					For lngColumnIndex = 0 To UBound(varElement)
 						Assert IsArray(avarRaw(lngRowIndex)), _
@@ -74,21 +73,21 @@ Class Matrix
 						Assert IsNumeric(avarRaw(lngRowIndex)(lngColumnIndex)), _
 							"Array contains non-numeric value(s)."
 
-						avarValues(lngRowIndex, lngColumnIndex) = _
+						adblValues(lngRowIndex, lngColumnIndex) = _
 							CDbl(avarRaw(lngRowIndex)(lngColumnIndex))
 					Next
 				Next
 			ElseIf IsNumeric(varElement) Then
-				Rem Input is Array2D().
+				Rem Input is Array2D(Number).
 
 				Rem Just copy & check.
-				ReDim avarValues(UBound(avarRaw, 1), UBound(avarRaw, 2))
+				ReDim adblValues(UBound(avarRaw, 1), UBound(avarRaw, 2))
 				For lngRowIndex = 0 To UBound(avarRaw)
 					For lngColumnIndex = 0 To UBound(avarRaw, 2)
 						Assert IsNumeric(avarRaw(lngRowIndex, lngColumnIndex)), _
 							"Array contains non-numeric value(s)."
 						
-						avarValues(lngRowIndex, lngColumnIndex) = _
+						adblValues(lngRowIndex, lngColumnIndex) = _
 							CDbl(avarRaw(lngRowIndex, lngColumnIndex))
 					Next
 				Next
@@ -96,8 +95,8 @@ Class Matrix
 			
 		End If
 
-		lngRow = UBound(avarValues, 1) + 1
-		lngColumn = UBound(avarValues, 2) + 1
+		lngRow = UBound(adblValues, 1) + 1
+		lngColumn = UBound(adblValues, 2) + 1
 		boolReadOnly = True
 	End Property
 
@@ -180,11 +179,11 @@ Class Matrix
 			lngColumnIndex < ColumnCount And lngColumnIndex >= 0, _
 			"Index out of range."
 		
-		Value = avarValues(lngRowIndex, lngColumnIndex)
+		Value = adblValues(lngRowIndex, lngColumnIndex)
 	End Property
 
 	Public Property Get Values()
-		Values = avarValues
+		Values = adblValues
 	End Property
 
 	Public Function Transpose()
@@ -338,6 +337,10 @@ Class Matrix
 		End If
 	End Property
 
+	Public Property Get Rank()
+		'TODO 'Rank = 
+	End Property
+
 	Public Function RemoveRow(lngRowIndex)
 		Rem Remove the specified row from the matrix.
 		
@@ -345,18 +348,14 @@ Class Matrix
 			"Index out of range."
 		
 		Dim adblRemoved()
-		ReDim adblRemoved(RowCount - 2, ColumnCount - 1)
+		ReDim adblRemoved(RowCount - 2)
 		Dim lngTemporaryRowIndex
-		Dim lngColumnIndex
 		For lngTemporaryRowIndex = 0 To UBound(Values, 1)
-			For lngColumnIndex = 0 To UBound(Values, 2)
-				If lngTemporaryRowIndex <> lngRowIndex Then
-					adblRemoved(lngTemporaryRowIndex - _
-						(Sgn(lngTemporaryRowIndex - lngRowIndex) + 1) / 2, _
-						lngColumnIndex) = _
-						Value(lngTemporaryRowIndex, lngColumnIndex)
-				End If
-			Next
+			If lngTemporaryRowIndex <> lngRowIndex Then
+				adblRemoved(lngTemporaryRowIndex - _
+					(Sgn(lngTemporaryRowIndex - lngRowIndex) + 1) / 2) = _
+					Row(lngTemporaryRowIndex)
+			End If
 		Next
 		Set RemoveRow = objMatrixGenerator.Init(adblRemoved)
 	End Function

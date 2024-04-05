@@ -80,4 +80,34 @@ Class LinearSystem
 				Return PLUPDecomposition()
 		End Select
 	End Function
+
+	
+	' Public Function Factorization(strType)
+	' End Function
+
+	' Private boolGaussEliminationed
+	' Private adblPermutationLeft, adblPermutationRight
+	' Private adblLowerTriangular, adblDiagonal, adblUpperTriangular
+	' Private Function GaussElimination()
+	' 	If Not boolGaussEliminationed Then
+	' 		Dim lngRowIndex, lngColumnIndex
+	' 		Set objPermutationLeft = objMatrixGenerator.Indentity(RowCount)
+	' 		Set objPermutationRight = objMatrixGenerator.Indentity(ColumnCount)
+
+	' 		adblUpperTriangular = Values
+			
+	' 		Dim adblPivot(ColumnCount - 1)
+
+	' 		Dim lngPivotRowIndex, lngPivotColumnIndex
+	' 		lngPivotColumnIndex = 0
+	' 		For lngPivotRowIndex = 0 To RowCount - 1
+	' 			If Not IsZero(adblUpperTriangular(lngPivotRowIndex, lngPivotColumnIndex)) Then
+
+
+
+	' 		Next
+			
+	' 	End If
+	' End Function
+
 End Class

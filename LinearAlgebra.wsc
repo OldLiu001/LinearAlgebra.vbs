@@ -59,6 +59,7 @@
 		<script language="VBScript" src="Classes/Class_VectorGenerator.vbs" />
 		<script language="VBScript" src="Classes/Class_Matrix.vbs" />
 		<script language="VBScript" src="Classes/Class_MatrixGenerator.vbs" />
+		<script language="VBScript" src="Classes/Class_LinearSystem.vbs" />
 		<script language="VBScript">
 			<![CDATA[
 				Option Explicit

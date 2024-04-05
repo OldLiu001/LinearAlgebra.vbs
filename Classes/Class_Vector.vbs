@@ -62,6 +62,7 @@ Class Vector
 
 	Public Property Get Value(ByRef lngIndex)
 		Assert IsInteger(lngIndex), "Index must be an integer."
+		Assert lngIndex >= 0 And lngIndex < Length, "Index out of range."
 
 		Value = avarValues(lngIndex)
 	End Property
@@ -71,31 +72,31 @@ Class Vector
 	End Property
 
 	Public Property Get Stringify()
-		Stringify = "[" + Join(avarValues, " ") + "]"
+		Stringify = "[" + Join(Values, " ") + "]"
 	End Property
 
 	Public Function Add(ByRef objAnotherVector)
 		Assert TypeName(objAnotherVector) = "Vector", _
 			"Input must be a Vector."
-		Assert lngLength = objAnotherVector.Length, _
+		Assert Length = objAnotherVector.Length, _
 			"Two Vector's length must be the same."
 		
 		Dim avarResult()
-		ReDim avarResult(lngLength - 1)
+		ReDim avarResult(Length - 1)
 		Dim lngIndex
 		For lngIndex = LBound(avarResult) To UBound(avarResult)
 			avarResult(lngIndex) = _
-				avarValues(lngIndex) + objAnotherVector.Value(lngIndex)
+				Value(lngIndex) + objAnotherVector.Value(lngIndex)
 		Next
 		Set Add = objVectorGenerator.Init(avarResult)
 	End Function
 
 	Public Function Negate()
 		Dim avarResult()
-		ReDim avarResult(lngLength - 1)
+		ReDim avarResult(Length - 1)
 		Dim lngIndex
 		For lngIndex = LBound(avarResult) To UBound(avarResult)
-			avarResult(lngIndex) = -avarValues(lngIndex)
+			avarResult(lngIndex) = -Value(lngIndex)
 		Next
 		Set Negate = objVectorGenerator.Init(avarResult)
 	End Function
@@ -113,13 +114,13 @@ Class Vector
 	End Function
 
 	Public Function Normalize()
-		Assert Not IsZero(varNorm), "Cannot normalize a zero vector."
+		Assert Not IsZero(Norm), "Cannot normalize a zero vector."
 
 		Dim avarResult()
-		ReDim avarResult(lngLength - 1)
+		ReDim avarResult(Length - 1)
 		Dim lngIndex
 		For lngIndex = LBound(avarResult) To UBound(avarResult)
-			avarResult(lngIndex) = avarValues(lngIndex) / varNorm
+			avarResult(lngIndex) = Value(lngIndex) / Norm
 		Next
 		Set Normalize = objVectorGenerator.Init(avarResult)
 	End Function
@@ -127,15 +128,15 @@ Class Vector
 	Public Function DotProduct(ByRef objAnotherVector)
 		Assert TypeName(objAnotherVector) = "Vector", _
 			"Input must be a Vector."
-		Assert lngLength = objAnotherVector.Length, _
+		Assert Length = objAnotherVector.Length, _
 			"Two Vector's length must be the same."
 		
 		Dim lngIndex
 		Dim varResult
-		For lngIndex = LBound(avarValues) To UBound(avarValues)
+		For lngIndex = LBound(Values) To UBound(Values)
 			varResult = _
 				varResult + _
-				avarValues(lngIndex) * objAnotherVector.Value(lngIndex)
+				Value(lngIndex) * objAnotherVector.Value(lngIndex)
 		Next
 		DotProduct = varResult
 	End Function
@@ -144,11 +145,11 @@ Class Vector
 		Assert IsNumeric(varAnotherNumber), "Multiply operand is not numeric."
 		
 		Dim avarResult()
-		ReDim avarResult(lngLength - 1)
+		ReDim avarResult(Length - 1)
 		Dim lngIndex
 		For lngIndex = LBound(avarResult) To UBound(avarResult)
 			avarResult(lngIndex) = _
-				avarValues(lngIndex) * varAnotherNumber
+				Value(lngIndex) * varAnotherNumber
 		Next
 		Set Multiply = objVectorGenerator.Init(avarResult)
 	End Function

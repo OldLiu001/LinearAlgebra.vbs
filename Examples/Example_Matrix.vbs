@@ -89,3 +89,4 @@ WSH.Echo "E: " & E.Stringify()
 WSH.Echo timer
 WSH.Echo "E.Determinant(): " & E.Determinant()
 WSH.Echo timer
+
